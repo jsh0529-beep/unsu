@@ -258,7 +258,7 @@ footer{text-align:center;font-size:.72rem;color:#B39AA2;margin-top:50px;line-hei
 /* ═══════════ 접수 서버 설정 ═══════════
    구글 Apps Script 웹앱 배포 URL을 아래 따옴표 안에 붙여넣으세요.
    예) const SERVER_URL='https://script.google.com/macros/s/AKfycb.../exec';   */
-const SERVER_URL='https://script.google.com/macros/s/AKfycbyuLXhDzQfpgDPMzssmGVW8fOjt5y5rzDPouZ3uLZ47_2TrUtwDrMpHhFrdhoL3aRH8/exec';
+const SERVER_URL='https://script.google.com/macros/s/AKfycby51My7jysunfUOzXz02rWcLMQqYVrp1zvnxpa1b_TP7Yq4E4CZJC1wWFzZd8AvVMek/exec';
 
 /* ═══════════ 카카오페이 설정 ═══════════
    채윤 선생님의 카카오페이 송금 QR 링크를 아래 따옴표 안에 붙여넣으세요.
@@ -583,7 +583,9 @@ async function generateReport(){
   }
   try{localStorage.setItem('cw_key',key);}catch(e){}
   const s=sajuData;
-  const dataBlock=`[만세력 데이터 — 이 값만 사용할 것]\n${JSON.stringify({
+  const dm=s.dayMaster||{};
+  const dmLine=`※ 이 사주의 일간은 ${dm.ko}(${dm.gan})${dm.el} 하나뿐입니다. 본문 전체에서 일간을 언급할 때 반드시 "${dm.ko}(${dm.gan})${dm.el}"으로만 쓰고, 같은 오행의 다른 천간과 절대 바꿔 쓰지 마세요. 천간·지지를 언급할 때는 항상 한글(한자) 병기로 씁니다.`;
+  const dataBlock=`[만세력 데이터 — 이 값만 사용할 것]\n${dmLine}\n${JSON.stringify({
     이름:s.name, 성별:s.gender, 출생:s.solarBirth, 음력:s.lunarText, 시간모름:s.timeUnknown,
     일간:s.dayMaster, 원국:s.pillars, 오행분포:s.elements, 대운:s.daYun, 올해세운:s.thisYear,
     관심분야:s.focus, 질문:s.question },null,1)}`;

@@ -120,6 +120,12 @@ textarea{resize:vertical;min-height:74px}
 #preview h3{font-family:'Hahmlet',serif;font-size:1.02rem;margin:26px 0 12px;color:var(--rose-deep);letter-spacing:.1em;font-weight:500}
 #preview h3:first-child{margin-top:0}
 #preview p{margin-bottom:12px}
+#teaserBox{display:none;background:var(--paper);border-radius:12px;padding:26px 24px;margin-top:18px;
+  font-size:.95rem;line-height:2;color:var(--ink);box-shadow:inset 0 0 0 1px #F4D6DE;position:relative}
+#teaserBox::before{content:'맛보기';position:absolute;top:-11px;left:20px;background:var(--rose);color:#FFF;
+  font-size:.7rem;padding:3px 12px;border-radius:12px;letter-spacing:.15em}
+#teaserBox p{margin-bottom:12px}
+#teaserBox .t-cta{margin-top:16px;padding-top:14px;border-top:1px dashed #F0B9CC;font-size:.85rem;color:var(--rose-deep);text-align:center}
 footer{text-align:center;font-size:.72rem;color:#B39AA2;margin-top:50px;line-height:1.9}
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--rose-deep);color:#FFF;box-shadow:0 4px 16px rgba(214,85,130,.35);
   padding:11px 26px;border-radius:30px;font-size:.88rem;display:none;z-index:99}
@@ -207,6 +213,14 @@ footer{text-align:center;font-size:.72rem;color:#B39AA2;margin-top:50px;line-hei
     <div class="birth-line" id="birthLine"></div>
   </div>
 
+  <!-- ── 2.5 맛보기 간명 ── -->
+  <section class="card" style="margin-top:22px" id="teaserCard">
+    <h2>맛보기 간명 · 무료</h2>
+    <p style="text-align:center;font-size:.88rem;color:var(--ink-dim)">결제 전에, 채윤이 이 사주를 어떻게 읽는지 살짝 보여드릴게요</p>
+    <button class="btn ghost" id="teaserBtn" style="margin-top:16px">채윤의 맛보기 간명 받아보기</button>
+    <div id="teaserBox"></div>
+  </section>
+
   <!-- ── 3. 입금 안내 ── -->
   <section class="card pay" style="margin-top:22px">
     <h2>간명서 신청 안내</h2>
@@ -258,7 +272,7 @@ footer{text-align:center;font-size:.72rem;color:#B39AA2;margin-top:50px;line-hei
 /* ═══════════ 접수 서버 설정 ═══════════
    구글 Apps Script 웹앱 배포 URL을 아래 따옴표 안에 붙여넣으세요.
    예) const SERVER_URL='https://script.google.com/macros/s/AKfycb.../exec';   */
-const SERVER_URL='https://script.google.com/macros/s/AKfycby51My7jysunfUOzXz02rWcLMQqYVrp1zvnxpa1b_TP7Yq4E4CZJC1wWFzZd8AvVMek/exec';
+const SERVER_URL='https://script.google.com/macros/s/AKfycbwYjEHrQs2K5i_DUNeaP7nMkdDK2d8Ky1NifWlEbQUddkY56SsdXPn4VCAIxupIPfd3/exec';
 
 /* ═══════════ 카카오페이 설정 ═══════════
    채윤 선생님의 카카오페이 송금 QR 링크를 아래 따옴표 안에 붙여넣으세요.
@@ -404,7 +418,9 @@ function renderBoard(s){
   $('board').style.display='block';
   $('board').scrollIntoView({behavior:'smooth'});
 }
-$('calcBtn').onclick=()=>{const s=calcSaju(); if(s){sajuData=s; renderBoard(s);}};
+$('calcBtn').onclick=()=>{const s=calcSaju(); if(s){sajuData=s; renderBoard(s);
+  $('teaserBox').style.display='none'; $('teaserBox').innerHTML='';
+  const tb=$('teaserBtn'); tb.style.display='block'; tb.disabled=false; tb.textContent='채윤의 맛보기 간명 받아보기';}};
 
 /* ═══════════ 신청 내용 복사 ═══════════ */
 function copyText(t,msg){
@@ -412,6 +428,32 @@ function copyText(t,msg){
     const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();
     document.execCommand('copy');ta.remove();toast(msg);});
 }
+
+/* ═══════════ 맛보기 간명 (무료, 서버 생성·캐시) ═══════════ */
+let teaserBusy=false;
+$('teaserBtn').onclick=async()=>{
+  if(teaserBusy)return;
+  if(!sajuData){toast('먼저 만세력을 살펴봐 주세요');return;}
+  teaserBusy=true;
+  const btn=$('teaserBtn');
+  btn.disabled=true; btn.textContent='채윤이 사주를 살펴보고 있어요...';
+  try{
+    const r=await fetch(SERVER_URL,{method:'POST',body:JSON.stringify({action:'teaser',data:sajuData})});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.error||'생성 실패');
+    const box=$('teaserBox');
+    box.innerHTML=String(j.text).split('\n').filter(l=>l.trim())
+      .map(l=>`<p>${l.trim()}</p>`).join('')
+      +`<div class="t-cta">여기까지는 겉장이에요. 속 이야기 — 재물·애정·건강·대운의 흐름은<br>A4 열 장 간명서에 찬찬히 적어 보내드릴게요 ✉️</div>`;
+    box.style.display='block';
+    btn.style.display='none';
+    box.scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){
+    btn.disabled=false; btn.textContent='채윤의 맛보기 간명 받아보기';
+    toast('맛보기 생성이 잠시 어려워요: '+e.message);
+  }
+  teaserBusy=false;
+};
 
 /* ═══════════ 간명 신청 접수 (서버 자동 저장) ═══════════ */
 $('applyBtn').onclick=async()=>{

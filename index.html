@@ -101,6 +101,12 @@ textarea{resize:vertical;min-height:74px}
 .birth-line{text-align:center;font-size:.8rem;color:#9E838C;margin-top:16px}
 /* 입금 안내 */
 .pay{border:1px solid var(--rose);background:linear-gradient(180deg, rgba(238,127,160,.10), rgba(201,180,240,.06))}
+.prod-item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#FFFDFB;
+  border:1.5px solid var(--rose-pale);border-radius:10px;padding:13px 15px;margin-top:10px;cursor:pointer;font-size:.9rem}
+.prod-item.on{border-color:var(--rose);background:#FFE4EC}
+.prod-item .p-name{color:var(--ink)}
+.prod-item .p-desc{display:block;font-size:.76rem;color:var(--ink-dim);margin-top:2px}
+.prod-item .p-price{font-family:'Hahmlet',serif;font-size:1.05rem;color:var(--rose-deep);white-space:nowrap}
 .pay .amount{font-family:'Hahmlet',serif;font-size:1.7rem;color:var(--rose-deep);text-align:center;margin:6px 0 2px}
 .steps{margin-top:16px;font-size:.86rem;color:var(--ink-dim);line-height:2}
 .steps b{color:var(--ink)}
@@ -224,12 +230,27 @@ footer{text-align:center;font-size:.72rem;color:#B39AA2;margin-top:50px;line-hei
   <!-- ── 3. 입금 안내 ── -->
   <section class="card pay" style="margin-top:22px">
     <h2>간명서 신청 안내</h2>
-    <p style="text-align:center;font-size:.88rem;color:var(--ink-dim)">A4 열 장 분량, 손편지처럼 정성 들여 적은 간명서를 보내드려요</p>
-    <div class="amount">30,000원</div>
+    <p style="text-align:center;font-size:.88rem;color:var(--ink-dim)">원하시는 상담 방식을 골라주세요</p>
+    <div id="prodSel">
+      <div class="prod-item on" data-v="간명서" data-amt="30000">
+        <span class="p-name">간명서
+          <span class="p-desc">A4 열 장, 손편지 같은 간명서를 이메일로 보내드려요</span></span>
+        <span class="p-price">30,000원</span>
+      </div>
+      <div class="prod-item" data-v="간명서+전화상담" data-amt="50000">
+        <span class="p-name">간명서 + 전화상담
+          <span class="p-desc">간명서에 더해, 채윤과 전화로 궁금한 점을 나눠요 (20분)</span></span>
+        <span class="p-price">50,000원</span>
+      </div>
+    </div>
+    <div id="phoneWrap" style="display:none">
+      <label>전화상담 받으실 연락처를 알려주세요</label>
+      <input type="text" id="phone" inputmode="tel" placeholder="010-0000-0000">
+    </div>
     <div class="steps">
       ① 아래 <b>[간명 신청 등록]</b>을 눌러주세요<br>
-      ② 등록이 되면 <b>[카카오페이로 보내기]</b>가 열려요 — 30,000원을 보내주세요<br>
-      ③ 확인되면 <b>24시간 이내</b>에, 마음을 담은 간명서를 이메일로 보내드릴게요
+      ② 등록이 되면 <b>[카카오페이로 보내기]</b>가 열려요 — <b id="stepAmt">30,000원</b>을 보내주세요<br>
+      ③ 확인되면 <b>24시간 이내</b>에 간명서를 보내드리고, 전화상담은 편하신 시간을 잡아 연락드려요
     </div>
     <button class="btn" id="applyBtn">간명 신청 등록</button>
     <button class="btn kakao" id="payBtn" disabled>카카오페이로 보내기 (등록 후 열려요)</button>
@@ -304,6 +325,7 @@ function sipseong(day, other){
 /* ═══════════ UI 상태 ═══════════ */
 const $=id=>document.getElementById(id);
 let gender='여', calType='solar', jasi='ya', focusSel=[], sajuData=null, sections=[];
+let product={name:'간명서', amt:30000};
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2200);}
 function segInit(id, cb){$(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{
   $(id).querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cb(b.dataset.v);});}
@@ -314,6 +336,16 @@ $('focusTags').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   b.classList.toggle('on');
   focusSel=[...$('focusTags').querySelectorAll('.on')].map(x=>x.dataset.v);});
 $('noTime').onchange=e=>$('btime').disabled=e.target.checked;
+
+/* 상품 선택 */
+document.querySelectorAll('#prodSel .prod-item').forEach(el=>el.onclick=()=>{
+  if(el.classList.contains('lock'))return;
+  document.querySelectorAll('#prodSel .prod-item').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  product={name:el.dataset.v, amt:+el.dataset.amt};
+  $('stepAmt').textContent=product.amt.toLocaleString()+'원';
+  $('phoneWrap').style.display=product.name.includes('전화')?'block':'none';
+});
 
 /* 관리자 진입: 낙관 5회 클릭 */
 function openAdminRestore(){try{$('apiKey').value=localStorage.getItem('cw_key')||'';$('adminKey').value=localStorage.getItem('cw_adm')||'';}catch(e){}}
@@ -458,16 +490,23 @@ $('teaserBtn').onclick=async()=>{
 /* ═══════════ 간명 신청 접수 (서버 자동 저장) ═══════════ */
 $('applyBtn').onclick=async()=>{
   if(!sajuData){toast('먼저 만세력을 살펴봐 주세요');return;}
+  if(product.name.includes('전화')){
+    const ph=$('phone').value.trim();
+    if(ph.replace(/\D/g,'').length<9){toast('전화상담 받으실 연락처를 알려주세요');$('phone').focus();return;}
+    sajuData.phone=ph;
+  }
+  sajuData.product=product.name; sajuData.amount=product.amt;
   const btn=$('applyBtn'); btn.disabled=true; btn.textContent='신청 등록 중...';
   try{
     const r=await fetch(SERVER_URL,{method:'POST',body:JSON.stringify({name:sajuData.name,email:sajuData.email,data:sajuData})});
     const j=await r.json();
     if(!j.ok) throw 0;
     btn.textContent='① 신청 등록 완료';
+    document.querySelectorAll('#prodSel .prod-item').forEach(x=>x.classList.add('lock'));
     const pay=$('payBtn');
-    pay.disabled=false; pay.textContent='카카오페이로 30,000원 보내기';
+    pay.disabled=false; pay.textContent='카카오페이로 '+product.amt.toLocaleString()+'원 보내기';
     pay.scrollIntoView({behavior:'smooth',block:'center'});
-    toast('등록되었어요. 이제 카카오페이로 30,000원을 보내주세요.');
+    toast('등록되었어요. 이제 카카오페이로 '+product.amt.toLocaleString()+'원을 보내주세요.');
   }catch(e){
     btn.disabled=false; btn.textContent='간명 신청 등록';
     $('copyApply').style.display='block';
@@ -492,7 +531,8 @@ $('copyApply').onclick=()=>{
 원국: 년 ${line('year')} 월 ${line('month')} 일 ${line('day')} 시 ${line('time')}
 관심: ${s.focus.join(', ')||'전반'}
 질문: ${s.question||'없음'}
-결제: 카카오페이 30,000원${KAKAOPAY_URL?' ('+KAKAOPAY_URL+')':''}
+상품: ${product.name} ${product.amt.toLocaleString()}원${sajuData.phone?' / 연락처 '+sajuData.phone:''}
+결제: 카카오페이 ${product.amt.toLocaleString()}원${KAKAOPAY_URL?' ('+KAKAOPAY_URL+')':''}
 DATA: ${JSON.stringify(s)}`;
   copyText(t,'신청 내용이 복사되었어요. 카카오톡·문자로 보내주세요.');
 };
@@ -514,9 +554,11 @@ async function loadList(){
     box.innerHTML=j.list.length ? j.list.slice().reverse().map(it=>{
       const st=String(it.status||'');
       const cls=st.startsWith('작성완료')||st.startsWith('발송완료')?'done':'';
+      let pr='';
+      try{const dd=typeof it.data==='string'?JSON.parse(it.data):it.data; if(dd&&dd.product)pr=' · '+dd.product+(dd.phone?' ☎':'');}catch(e){}
       return `
       <div class="app-item" data-id="${it.id}">
-        <span><b>${it.name}</b> 님 · ${it.ts}</span>
+        <span><b>${it.name}</b> 님 · ${it.ts}${pr}</span>
         <span class="st ${cls}">${st} ▸</span>
       </div>`;}).join('') : '<p class="note">아직 신청 내역이 없습니다.</p>';
     box.querySelectorAll('.app-item').forEach(el=>el.onclick=async()=>{

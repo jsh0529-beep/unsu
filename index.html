@@ -555,7 +555,10 @@ async function loadList(){
       const st=String(it.status||'');
       const cls=st.startsWith('작성완료')||st.startsWith('발송완료')?'done':'';
       let pr='';
-      try{const dd=typeof it.data==='string'?JSON.parse(it.data):it.data; if(dd&&dd.product)pr=' · '+dd.product+(dd.phone?' ☎':'');}catch(e){}
+      try{const dd=typeof it.data==='string'?JSON.parse(it.data):it.data;
+        if(dd&&dd.product)pr=' · '+dd.product;
+        if(dd&&dd.phone)pr+=` · <a href="tel:${String(dd.phone).replace(/[^0-9+]/g,'')}" onclick="event.stopPropagation()" style="color:var(--rose-deep);text-decoration:underline;white-space:nowrap">☎ ${dd.phone}</a>`;
+      }catch(e){}
       return `
       <div class="app-item" data-id="${it.id}">
         <span><b>${it.name}</b> 님 · ${it.ts}${pr}</span>
